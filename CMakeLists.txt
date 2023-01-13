@@ -8,5 +8,5 @@ include_directories(include)
 find_library(GOCATOR NAMES GoSdk REQUIRED)
 find_library(KAPI NAMES kApi REQUIRED)
 
-add_executable(gocator_record src/main.cpp)
+add_executable(gocator_record src/main.cpp src/raw_message.cpp)
 target_link_libraries(gocator_record PUBLIC ${GOCATOR} ${KAPI})

@@ -1,15 +1,16 @@
 #pragma once
 
 #include <cinttypes>
+#include <fstream>
 #include <vector>
 
 namespace gocator {
 constexpr signed short kInvalidRange = ((signed short)0x8000);
 
 struct Point {
-    int16_t x;
-    int16_t y;
-    uint8_t i;
+    int16_t x{0};
+    int16_t z{0};
+    uint8_t i{0};
 };
 
 struct Message {
@@ -23,5 +24,8 @@ struct Message {
     double z_offset{0};
 
     std::vector<Point> points;
+
+    void to_stream(std::ofstream& file) const;
+    static Message from_stream(std::ifstream& file);
 };
 }  // namespace gocator
