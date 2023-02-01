@@ -1,225 +1,241 @@
 #include <GoSdk/GoSdk.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
 
-#include <chrono>
-#include <memory>
-#include <raw_message.hpp>
-#include <vector>
-#include <cinttypes>
+#define RECEIVE_TIMEOUT         (20000000)
+#define INVALID_RANGE_16BIT     ((signed short)0x8000)          // gocator transmits range data as 16-bit signed integers. 0x8000 signifies invalid range data.
+#define DOUBLE_MAX              ((k64f)1.7976931348623157e+308) // 64-bit double - largest positive value.
+#define INVALID_RANGE_DOUBLE    ((k64f)-DOUBLE_MAX)             // floating point value to represent invalid range data.
+#define SENSOR_IP               "192.168.1.10"
 
-#define RECEIVE_TIMEOUT (20000000)
-#define SENSOR_IP "192.168.1.10"
+#define NM_TO_MM(VALUE) (((k64f)(VALUE))/1000000.0)
+#define UM_TO_MM(VALUE) (((k64f)(VALUE))/1000.0)
 
-#define NM_TO_MM(VALUE) (((k64f)(VALUE)) / 1000000.0)
-#define UM_TO_MM(VALUE) (((k64f)(VALUE)) / 1000.0)
+typedef struct ProfilePoint
+{
+    double x;   // x-coordinate in engineering units (mm) - position along laser line
+    double z;   // z-coordinate in engineering units (mm) - height (at the given x position)
+    unsigned char intensity;
+} ProfilePoint;
 
-using namespace std::chrono_literals;
-using namespace std::chrono;
-
-constexpr double kTotalDistance = 100;
-constexpr double kSpacing = 25.0 / 1940.0;
-constexpr size_t kTotalSamples = static_cast<size_t>(kTotalDistance / kSpacing);
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     kAssembly api = kNULL;
     kStatus status;
-    unsigned int i, j, k, array_index;
+    unsigned int i, j, k, arrayIndex;
     GoSystem system = kNULL;
     GoSensor sensor = kNULL;
     GoDataSet dataset = kNULL;
-    std::vector<gocator::Message> messages;
-
-    GoStamp* stamp = kNULL;
-    GoDataMsg data_object;
+    ProfilePoint* profileBuffer = NULL;
+    GoStamp *stamp =kNULL;
+    GoDataMsg dataObj;
     kIpAddress ipAddress;
     GoSetup setup = kNULL;
-    uint32_t count;
+    k32u profilePointCount;
 
     // construct Gocator API Library
-    if ((status = GoSdk_Construct(&api)) != kOK) {
+    if ((status = GoSdk_Construct(&api)) != kOK)
+    {
         printf("Error: GoSdk_Construct:%d\n", status);
-        return 0;
+        return 1;
     }
 
     // construct GoSystem object
-    if ((status = GoSystem_Construct(&system, kNULL)) != kOK) {
+    if ((status = GoSystem_Construct(&system, kNULL)) != kOK)
+    {
         printf("Error: GoSystem_Construct:%d\n", status);
-        return 0;
+        return 1;
     }
 
     // Parse IP address into address data structure
     kIpAddress_Parse(&ipAddress, SENSOR_IP);
 
     // obtain GoSensor object by sensor IP address
-    if ((status = GoSystem_FindSensorByIpAddress(system, &ipAddress, &sensor)) != kOK) {
+    if ((status = GoSystem_FindSensorByIpAddress(system, &ipAddress, &sensor)) != kOK)
+    {
         printf("Error: GoSystem_FindSensor:%d\n", status);
-        return 0;
+        return 1;
     }
 
     // create connection to GoSensor object
-    if ((status = GoSensor_Connect(sensor)) != kOK) {
+    if ((status = GoSensor_Connect(sensor)) != kOK)
+    {
         printf("Error: GoSensor_Connect:%d\n", status);
-        return 0;
+        return 1;
     }
-    printf("Connect status %d\n", status);
 
     // enable sensor data channel
-    if ((status = GoSystem_EnableData(system, kTRUE)) != kOK) {
+    if ((status = GoSystem_EnableData(system, kTRUE)) != kOK)
+    {
         printf("Error: GoSensor_EnableData:%d\n", status);
-        return 0;
+        return 1;
     }
 
     // retrieve setup handle
-    if ((setup = GoSensor_Setup(sensor)) == kNULL) {
+    if ((setup = GoSensor_Setup(sensor)) == kNULL)
+    {
         printf("Error: GoSensor_Setup: Invalid Handle\n");
     }
 
     // retrieve total number of profile points prior to starting the sensor
-    if (GoSetup_UniformSpacingEnabled(setup)) {
+    if (GoSetup_UniformSpacingEnabled(setup))
+    {
         // Uniform spacing is enabled. The number is based on the X Spacing setting
-        count = GoSetup_XSpacingCount(setup, GO_ROLE_MAIN);
-    } else {
-        // non-uniform spacing is enabled. The max number is based on the number of columns used in the camera.
-        count = GoSetup_FrontCameraWidth(setup, GO_ROLE_MAIN);
+        profilePointCount = GoSetup_XSpacingCount(setup, GO_ROLE_MAIN);
     }
-    printf("count: %i\n", count);
+    else
+    {
+        // non-uniform spacing is enabled. The max number is based on the number of columns used in the camera.
+        profilePointCount = GoSetup_FrontCameraWidth(setup, GO_ROLE_MAIN);
+    }
 
-    // Reserve space
-    messages.reserve(kTotalSamples);
+//    if ((profileBuffer = malloc(profilePointCount * sizeof(ProfilePoint))) == kNULL)
+    if ((profileBuffer = new ProfilePoint()) == kNULL)
+    {
+        printf("Error: Cannot allocate profileData, %d points\n", profilePointCount);
+        return 1;
+    }
 
     // start Gocator sensor
-    if ((status = GoSystem_Start(system)) != kOK) {
+    if ((status = GoSystem_Start(system)) != kOK)
+    {
         printf("Error: GoSensor_Start:%d\n", status);
-        return 0;
+        return 1;
     }
 
-    auto start = std::chrono::steady_clock::now();
+    if (GoSystem_ReceiveData(system, &dataset, RECEIVE_TIMEOUT) == kOK)
+    {
+        printf("Data message received:\n");
+        printf("Dataset count: %u\n", (k32u)GoDataSet_Count(dataset));
+        // each result can have multiple data items
+        // loop through all items in result message
+        for (i = 0; i < GoDataSet_Count(dataset); ++i)
+        {
+            dataObj = GoDataSet_At(dataset, i);
+            //Retrieve GoStamp message
+            switch(GoDataMsg_Type(dataObj))
+            {
+                case GO_DATA_MESSAGE_TYPE_STAMP:
+                {
+                    GoStampMsg stampMsg = dataObj;
 
-    while (true) {
-        if (GoSystem_ReceiveData(system, &dataset, RECEIVE_TIMEOUT) == kOK) {
-            messages.emplace_back();
-            auto message = messages.back();
-            message.points.reserve(count);
-            for (size_t ic = 0; ic < count; ++ic) {
-                message.points.emplace_back();
-            }
-
-            for (i = 0; i < GoDataSet_Count(dataset); ++i) {
-                data_object = GoDataSet_At(dataset, i);
-                // Retrieve GoStamp message
-                switch (GoDataMsg_Type(data_object)) {
-                    case GO_DATA_MESSAGE_TYPE_STAMP: {
-                        GoStampMsg stampMsg = data_object;
-
-                        // Stamp messages should only be one if there's just one sensor
-                        for (j = 0; j < GoStampMsg_Count(stampMsg); ++j) {
-                            stamp = GoStampMsg_At(stampMsg, j);
-                            message.timestamp = stamp->timestamp;
-                            message.encoder = stamp->encoder;
-                            message.frame_index = stamp->frameIndex;
-                        }
-                    } break;
-                    case GO_DATA_MESSAGE_TYPE_PROFILE_POINT_CLOUD:  // Note this is NON resampled profile
+                    printf("Stamp Message batch count: %u\n", (k32u)GoStampMsg_Count(stampMsg));
+                    for (j = 0; j < GoStampMsg_Count(stampMsg); ++j)
                     {
-                        GoProfileMsg profile_msg = data_object;
-
-                        // There should only be one if there's just one sensor
-                        for (k = 0; k < GoProfileMsg_Count(profile_msg); ++k) {
-                            kPoint16s* data = GoProfileMsg_At(profile_msg, k);
-                            message.x_res = NM_TO_MM(GoProfileMsg_XResolution(profile_msg));
-                            message.z_res = NM_TO_MM(GoProfileMsg_ZResolution(profile_msg));
-                            message.x_offset = UM_TO_MM(GoProfileMsg_XOffset(profile_msg));
-                            message.z_offset = UM_TO_MM(GoProfileMsg_ZOffset(profile_msg));
-
-                            for (array_index = 0; array_index < GoProfileMsg_Width(profile_msg); ++array_index) {
-                                if (array_index >= count) {
-                                    message.points.emplace_back();
-                                }
-
-                                auto& p = message.points[array_index];
-                                p.x = data[array_index].x;
-                                p.z = data[array_index].y;
-                            }
-                        }
-                    } break;
-                    case GO_DATA_MESSAGE_TYPE_PROFILE_INTENSITY: {
-                        GoProfileIntensityMsg intensity_msg = data_object;
-
-                        for (k = 0; k < GoProfileIntensityMsg_Count(intensity_msg); ++k) {
-                            unsigned char* data = GoProfileIntensityMsg_At(intensity_msg, k);
-                            for (array_index = 0; array_index < GoProfileIntensityMsg_Width(intensity_msg);
-                                 ++array_index) {
-                                if (array_index >= count) {
-                                    message.points.emplace_back();
-                                }
-
-                                message.points[array_index].i = data[array_index];
-                            }
-                        }
-                    } break;
+                        stamp = GoStampMsg_At(stampMsg, j);
+                        printf("  Timestamp: %llu\n", stamp->timestamp);
+                        printf("  Encoder: %lld\n", stamp->encoder);
+                        printf("  Frame index: %llu\n", stamp->frameIndex);
+                    }
                 }
+                    break;
+                case GO_DATA_MESSAGE_TYPE_UNIFORM_PROFILE:
+                {
+                    GoResampledProfileMsg profileMsg = dataObj;
+
+                    printf("Resampled Profile Message batch count: %u\n", (k32u)GoResampledProfileMsg_Count(profileMsg));
+
+                    for (k = 0; k < GoResampledProfileMsg_Count(profileMsg); ++k)
+                    {
+                        unsigned int validPointCount = 0;
+                        short* data = GoResampledProfileMsg_At(profileMsg, k);
+                        double XResolution = NM_TO_MM(GoResampledProfileMsg_XResolution(profileMsg));
+                        double ZResolution = NM_TO_MM(GoResampledProfileMsg_ZResolution(profileMsg));
+                        double XOffset = UM_TO_MM(GoResampledProfileMsg_XOffset(profileMsg));
+                        double ZOffset = UM_TO_MM(GoResampledProfileMsg_ZOffset(profileMsg));
+
+                        //translate 16-bit range data to engineering units and copy profiles to memory array
+                        for (arrayIndex = 0; arrayIndex < GoResampledProfileMsg_Width(profileMsg); ++arrayIndex)
+                        {
+                            if (data[arrayIndex] != INVALID_RANGE_16BIT )
+                            {
+                                profileBuffer[arrayIndex].x = XOffset + XResolution * arrayIndex;
+                                profileBuffer[arrayIndex].z = ZOffset + ZResolution * data[arrayIndex];
+                                validPointCount++;
+                            }
+                            else
+                            {
+                                profileBuffer[arrayIndex].x = XOffset + XResolution * arrayIndex;
+                                profileBuffer[arrayIndex].z = INVALID_RANGE_DOUBLE;
+                            }
+                        }
+                        printf("  Profile Valid Point %d out of max %d\n", validPointCount, profilePointCount);
+                    }
+                }
+                    break;
+                case GO_DATA_MESSAGE_TYPE_PROFILE_POINT_CLOUD: // Note this is NON resampled profile
+                {
+                    GoProfileMsg profileMsg = dataObj;
+
+                    printf("Profile Message batch count: %u\n", (k32u)GoProfileMsg_Count(profileMsg));
+
+                    for (k = 0; k < GoProfileMsg_Count(profileMsg); ++k)
+                    {
+                        kPoint16s* data = GoProfileMsg_At(profileMsg, k);
+                        unsigned int validPointCount = 0;
+                        double XResolution = NM_TO_MM(GoProfileMsg_XResolution(profileMsg));
+                        double ZResolution = NM_TO_MM(GoProfileMsg_ZResolution(profileMsg));
+                        double XOffset = UM_TO_MM(GoProfileMsg_XOffset(profileMsg));
+                        double ZOffset = UM_TO_MM(GoProfileMsg_ZOffset(profileMsg));
+
+                        //translate 16-bit range data to engineering units and copy profiles to memory array
+                        for (arrayIndex = 0; arrayIndex < GoProfileMsg_Width(profileMsg); ++arrayIndex)
+                        {
+                            if (data[arrayIndex].x != INVALID_RANGE_16BIT)
+                            {
+                                profileBuffer[arrayIndex].x = XOffset + XResolution * data[arrayIndex].x;
+                                profileBuffer[arrayIndex].z = ZOffset + ZResolution * data[arrayIndex].y;
+                                validPointCount++;
+                            }
+                            else
+                            {
+                                profileBuffer[arrayIndex].x = INVALID_RANGE_DOUBLE;
+                                profileBuffer[arrayIndex].z = INVALID_RANGE_DOUBLE;
+                            }
+                        }
+                        printf("  Profile Valid Point %d out of max %d\n", validPointCount, profilePointCount);
+                    }
+                }
+                    break;
+                case GO_DATA_MESSAGE_TYPE_PROFILE_INTENSITY:
+                {
+                    //kSize validPointCount = 0;
+                    GoProfileIntensityMsg intensityMsg = dataObj;
+                    printf("Intensity Message batch count: %u\n", (k32u)GoProfileIntensityMsg_Count(intensityMsg));
+
+                    for (k = 0; k < GoProfileIntensityMsg_Count(intensityMsg); ++k)
+                    {
+                        unsigned char* data = GoProfileIntensityMsg_At(intensityMsg, k);
+                        for (arrayIndex = 0; arrayIndex < GoProfileIntensityMsg_Width(intensityMsg); ++arrayIndex)
+                        {
+                            profileBuffer[arrayIndex].intensity = data[arrayIndex];
+                        }
+                    }
+                }
+                    break;
             }
-            GoDestroy(dataset);
-        } else {
-            printf("Error: No data received during the waiting period\n");
-            break;
         }
-
-        if (messages.size() >= kTotalSamples) {
-            break;
-//            auto elapsed = std::chrono::steady_clock::now() - start;
-//            auto elapsed_ms =
-//                static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-//            printf("Rx %0.2f\n", static_cast<double>(messages.size()) / (elapsed_ms / 1000.0));
-
-
-            // Check
-//            std::ifstream in_file("test.data", std::ios::binary | std::ios::in);
-//            std::vector<gocator::Message> recorded;
-//            while (!in_file.eof()) {
-//                recorded.push_back(gocator::Message::from_stream(in_file));
-//            }
-//
-//            for (int l = 0; l < messages.size(); ++l) {
-//                if (recorded[l].timestamp != messages[l].timestamp) printf("mis-match\n");
-//                if (recorded[l].frame_index != messages[l].frame_index) printf("mis-match\n");
-//                if (recorded[l].encoder != messages[l].encoder) printf("mis-match\n");
-//                if (recorded[l].x_res != messages[l].x_res) printf("mis-match\n");
-//                if (recorded[l].z_res != messages[l].z_res) printf("mis-match\n");
-//                if (recorded[l].x_offset != messages[l].x_offset) printf("mis-match\n");
-//                if (recorded[l].z_offset != messages[l].z_offset) printf("mis-match\n");
-//
-//                for (int m = 0; m < messages[l].points.size(); ++m) {
-//                    if (recorded[l].points[m].x != messages[l].points[m].x) printf("mis-match\n");
-//                    if (recorded[l].points[m].z != messages[l].points[m].z) printf("mis-match\n");
-//                    if (recorded[l].points[m].i != messages[l].points[m].i) printf("mis-match\n");
-//                }
-//            }
-//
-//            messages.clear();
-//            start = std::chrono::steady_clock::now();
-        }
+        GoDestroy(dataset);
     }
-
-    uint64_t time_stamp = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
-    std::string file_name = std::to_string(time_stamp) + ".data";
-//    std::ofstream out(file_name, std::ios::binary | std::ios::out);
-    std::ofstream out(file_name, std::ios::out);
-    for (const auto& m : messages) {
-        m.to_stream(out);
+    else
+    {
+        printf ("Error: No data received during the waiting period\n");
     }
-    out.close();
 
     // stop Gocator sensor
-//    if ((status = GoSystem_Stop(system)) != kOK) {
-//        printf("Error: GoSensor_Stop:%d\n", status);
-//        return 0;
-//    }
+    if ((status = GoSystem_Stop(system)) != kOK)
+    {
+        printf("Error: GoSensor_Stop:%d\n", status);
+        return 1;
+    }
 
     // destroy handles
     GoDestroy(system);
     GoDestroy(api);
+    free(profileBuffer);
 
-//    printf("Press any key to continue...\n");
-//    getchar();
+    printf("Press any key to continue...\n");
+    getchar();
     return 0;
 }
