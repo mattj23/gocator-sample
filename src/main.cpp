@@ -26,18 +26,18 @@ typedef struct ProfilePoint {
 int main(int argc, char** argv) {
     //    kAssembly api = kNULL;
     //    kStatus status;
-    unsigned int i, j, k, arrayIndex;
+//    unsigned int i, j, k, arrayIndex;
     //    GoSystem system = kNULL;
     //    GoSensor sensor = kNULL;
-    GoDataSet dataset = kNULL;
-    ProfilePoint* profileBuffer = NULL;
-    GoStamp* stamp = kNULL;
-    GoDataMsg dataObj;
+//    GoDataSet dataset = kNULL;
+//    ProfilePoint* profileBuffer = NULL;
+//    GoStamp* stamp = kNULL;
+//    GoDataMsg dataObj;
     //    kIpAddress ipAddress;
     //    GoSetup setup = kNULL;
     //    k32u profilePointCount;
 
-    std::vector<gocator::Message> messages;
+//    std::vector<gocator::Message> messages;
 
     //    // construct Gocator API Library
     //    if ((status = GoSdk_Construct(&api)) != kOK) {
@@ -101,142 +101,156 @@ int main(int argc, char** argv) {
     sensor.start_sensor();
 
     //    if (GoSystem_ReceiveData(system, &dataset, RECEIVE_TIMEOUT) == kOK) {
-    if (sensor.receive(&dataset, RECEIVE_TIMEOUT)) {
-        printf("Data message received:\n");
-        printf("Dataset count: %u\n", (k32u)GoDataSet_Count(dataset));
-        messages.emplace_back();
-        auto& working_message = messages.back();
+    //    if (sensor.receive(&dataset, RECEIVE_TIMEOUT)) {
+    //        printf("Data message received:\n");
+    //        printf("Dataset count: %u\n", (k32u)GoDataSet_Count(dataset));
+    //        messages.emplace_back();
+    //        auto& working_message = messages.back();
+    //
+    //        // each result can have multiple data items
+    //        // loop through all items in result message
+    //        for (i = 0; i < GoDataSet_Count(dataset); ++i) {
+    //            dataObj = GoDataSet_At(dataset, i);
+    //            // Retrieve GoStamp message
+    //            switch (GoDataMsg_Type(dataObj)) {
+    //                case GO_DATA_MESSAGE_TYPE_STAMP: {
+    //                    GoStampMsg stampMsg = dataObj;
+    //
+    //                    printf("Stamp Message batch count: %u\n", (k32u)GoStampMsg_Count(stampMsg));
+    //                    for (j = 0; j < GoStampMsg_Count(stampMsg); ++j) {
+    //                        stamp = GoStampMsg_At(stampMsg, j);
+    //                        printf("  Timestamp: %llu\n", stamp->timestamp);
+    //                        printf("  Encoder: %lld\n", stamp->encoder);
+    //                        printf("  Frame index: %llu\n", stamp->frameIndex);
+    //
+    //                        working_message.timestamp = stamp->timestamp;
+    //                        working_message.encoder = stamp->encoder;
+    //                        working_message.frame_index = stamp->frameIndex;
+    //                    }
+    //                } break;
+    //                case GO_DATA_MESSAGE_TYPE_UNIFORM_PROFILE: {
+    //                    GoResampledProfileMsg profileMsg = dataObj;
+    //
+    //                    printf("Resampled Profile Message batch count: %u\n",
+    //                           (k32u)GoResampledProfileMsg_Count(profileMsg));
+    //
+    //                    //                    for (k = 0; k < GoResampledProfileMsg_Count(profileMsg); ++k) {
+    //                    //                        unsigned int validPointCount = 0;
+    //                    //                        short* data = GoResampledProfileMsg_At(profileMsg, k);
+    //                    //                        double XResolution =
+    //                    //                        NM_TO_MM(GoResampledProfileMsg_XResolution(profileMsg)); double
+    //                    //                        ZResolution =
+    //                    NM_TO_MM(GoResampledProfileMsg_ZResolution(profileMsg));
+    //                    //                        double XOffset =
+    //                    UM_TO_MM(GoResampledProfileMsg_XOffset(profileMsg));
+    //                    //                        double ZOffset =
+    //                    UM_TO_MM(GoResampledProfileMsg_ZOffset(profileMsg));
+    //                    //
+    //                    //                        // translate 16-bit range data to engineering units and copy
+    //                    profiles to
+    //                    //                        memory array for (arrayIndex = 0; arrayIndex <
+    //                    //                        GoResampledProfileMsg_Width(profileMsg); ++arrayIndex) {
+    //                    //                            if (data[arrayIndex] != INVALID_RANGE_16BIT) {
+    //                    //                                profileBuffer[arrayIndex].x = XOffset + XResolution *
+    //                    arrayIndex;
+    //                    //                                profileBuffer[arrayIndex].z = ZOffset + ZResolution *
+    //                    //                                data[arrayIndex]; validPointCount++;
+    //                    //                            } else {
+    //                    //                                profileBuffer[arrayIndex].x = XOffset + XResolution *
+    //                    arrayIndex;
+    //                    //                                profileBuffer[arrayIndex].z = INVALID_RANGE_DOUBLE;
+    //                    //                            }
+    //                    //                        }
+    //                    //                        printf("  Profile Valid Point %d out of max %d\n", validPointCount,
+    //                    //                        profilePointCount);
+    //                    //                    }
+    //                } break;
+    //                case GO_DATA_MESSAGE_TYPE_PROFILE_POINT_CLOUD:  // Note this is NON resampled profile
+    //                {
+    //                    GoProfileMsg profileMsg = dataObj;
+    //
+    //                    printf("Profile Message batch count: %u\n", (k32u)GoProfileMsg_Count(profileMsg));
+    //
+    //                    // Reserve and create points
+    //                    size_t point_count = GoProfileMsg_Width(profileMsg);
+    //
+    //                    if (working_message.points.size() < point_count) {
+    //                        working_message.points.reserve(point_count);
+    //                        for (size_t pc_ = 0; pc_ < point_count; ++pc_) {
+    //                            working_message.points.emplace_back();
+    //                        }
+    //                    }
+    //
+    //                    for (k = 0; k < GoProfileMsg_Count(profileMsg); ++k) {
+    //                        kPoint16s* data = GoProfileMsg_At(profileMsg, k);
+    //                        unsigned int validPointCount = 0;
+    //                        double XResolution = NM_TO_MM(GoProfileMsg_XResolution(profileMsg));
+    //                        double ZResolution = NM_TO_MM(GoProfileMsg_ZResolution(profileMsg));
+    //                        double XOffset = UM_TO_MM(GoProfileMsg_XOffset(profileMsg));
+    //                        double ZOffset = UM_TO_MM(GoProfileMsg_ZOffset(profileMsg));
+    //
+    //                        working_message.x_res = XResolution;
+    //                        working_message.z_res = ZResolution;
+    //                        working_message.x_offset = XOffset;
+    //                        working_message.z_offset = ZOffset;
+    //
+    //                        // translate 16-bit range data to engineering units and copy profiles to memory array
+    //                        for (arrayIndex = 0; arrayIndex < GoProfileMsg_Width(profileMsg); ++arrayIndex) {
+    //                            working_message.points[arrayIndex].x = data[arrayIndex].x;
+    //                            working_message.points[arrayIndex].z = data[arrayIndex].y;
+    //
+    //                            //                            if (data[arrayIndex].x != INVALID_RANGE_16BIT) {
+    //                            //                                profileBuffer[arrayIndex].x = XOffset + XResolution
+    //                            *
+    //                            //                                data[arrayIndex].x; profileBuffer[arrayIndex].z =
+    //                            ZOffset
+    //                            //                                + ZResolution * data[arrayIndex].y;
+    //                            validPointCount++;
+    //                            //                            } else {
+    //                            //                                profileBuffer[arrayIndex].x = INVALID_RANGE_DOUBLE;
+    //                            //                                profileBuffer[arrayIndex].z = INVALID_RANGE_DOUBLE;
+    //                            //                            }
+    //                        }
+    //                        //                        printf("  Profile Valid Point %d out of max %d\n",
+    //                        validPointCount,
+    //                        //                        profilePointCount);
+    //                    }
+    //                } break;
+    //                case GO_DATA_MESSAGE_TYPE_PROFILE_INTENSITY: {
+    //                    // kSize validPointCount = 0;
+    //                    GoProfileIntensityMsg intensityMsg = dataObj;
+    //                    printf("Intensity Message batch count: %u\n",
+    //                    (k32u)GoProfileIntensityMsg_Count(intensityMsg));
+    //
+    //                    // Reserve and create points
+    //                    size_t point_count = GoProfileIntensityMsg_Count(intensityMsg);
+    //
+    //                    if (working_message.points.size() < point_count) {
+    //                        working_message.points.reserve(point_count);
+    //                        for (size_t pc_ = 0; pc_ < point_count; ++pc_) {
+    //                            working_message.points.emplace_back();
+    //                        }
+    //                    }
+    //
+    //                    for (k = 0; k < GoProfileIntensityMsg_Count(intensityMsg); ++k) {
+    //                        unsigned char* data = GoProfileIntensityMsg_At(intensityMsg, k);
+    //                        for (arrayIndex = 0; arrayIndex < GoProfileIntensityMsg_Width(intensityMsg); ++arrayIndex)
+    //                        {
+    //                            working_message.points[arrayIndex].i = data[arrayIndex];
+    //                            //                            profileBuffer[arrayIndex].intensity = data[arrayIndex];
+    //                        }
+    //                    }
+    //                } break;
+    //            }
+    //        }
+    //        GoDestroy(dataset);
+    //    } else {
+    //        printf("Error: No data received during the waiting period\n");
+    //    }
 
-        // each result can have multiple data items
-        // loop through all items in result message
-        for (i = 0; i < GoDataSet_Count(dataset); ++i) {
-            dataObj = GoDataSet_At(dataset, i);
-            // Retrieve GoStamp message
-            switch (GoDataMsg_Type(dataObj)) {
-                case GO_DATA_MESSAGE_TYPE_STAMP: {
-                    GoStampMsg stampMsg = dataObj;
+    sensor.receive_one(RECEIVE_TIMEOUT);
 
-                    printf("Stamp Message batch count: %u\n", (k32u)GoStampMsg_Count(stampMsg));
-                    for (j = 0; j < GoStampMsg_Count(stampMsg); ++j) {
-                        stamp = GoStampMsg_At(stampMsg, j);
-                        printf("  Timestamp: %llu\n", stamp->timestamp);
-                        printf("  Encoder: %lld\n", stamp->encoder);
-                        printf("  Frame index: %llu\n", stamp->frameIndex);
-
-                        working_message.timestamp = stamp->timestamp;
-                        working_message.encoder = stamp->encoder;
-                        working_message.frame_index = stamp->frameIndex;
-                    }
-                } break;
-                case GO_DATA_MESSAGE_TYPE_UNIFORM_PROFILE: {
-                    GoResampledProfileMsg profileMsg = dataObj;
-
-                    printf("Resampled Profile Message batch count: %u\n",
-                           (k32u)GoResampledProfileMsg_Count(profileMsg));
-
-                    //                    for (k = 0; k < GoResampledProfileMsg_Count(profileMsg); ++k) {
-                    //                        unsigned int validPointCount = 0;
-                    //                        short* data = GoResampledProfileMsg_At(profileMsg, k);
-                    //                        double XResolution =
-                    //                        NM_TO_MM(GoResampledProfileMsg_XResolution(profileMsg)); double
-                    //                        ZResolution = NM_TO_MM(GoResampledProfileMsg_ZResolution(profileMsg));
-                    //                        double XOffset = UM_TO_MM(GoResampledProfileMsg_XOffset(profileMsg));
-                    //                        double ZOffset = UM_TO_MM(GoResampledProfileMsg_ZOffset(profileMsg));
-                    //
-                    //                        // translate 16-bit range data to engineering units and copy profiles to
-                    //                        memory array for (arrayIndex = 0; arrayIndex <
-                    //                        GoResampledProfileMsg_Width(profileMsg); ++arrayIndex) {
-                    //                            if (data[arrayIndex] != INVALID_RANGE_16BIT) {
-                    //                                profileBuffer[arrayIndex].x = XOffset + XResolution * arrayIndex;
-                    //                                profileBuffer[arrayIndex].z = ZOffset + ZResolution *
-                    //                                data[arrayIndex]; validPointCount++;
-                    //                            } else {
-                    //                                profileBuffer[arrayIndex].x = XOffset + XResolution * arrayIndex;
-                    //                                profileBuffer[arrayIndex].z = INVALID_RANGE_DOUBLE;
-                    //                            }
-                    //                        }
-                    //                        printf("  Profile Valid Point %d out of max %d\n", validPointCount,
-                    //                        profilePointCount);
-                    //                    }
-                } break;
-                case GO_DATA_MESSAGE_TYPE_PROFILE_POINT_CLOUD:  // Note this is NON resampled profile
-                {
-                    GoProfileMsg profileMsg = dataObj;
-
-                    printf("Profile Message batch count: %u\n", (k32u)GoProfileMsg_Count(profileMsg));
-
-                    // Reserve and create points
-                    size_t point_count = GoProfileMsg_Width(profileMsg);
-
-                    if (working_message.points.size() < point_count) {
-                        working_message.points.reserve(point_count);
-                        for (size_t pc_ = 0; pc_ < point_count; ++pc_) {
-                            working_message.points.emplace_back();
-                        }
-                    }
-
-                    for (k = 0; k < GoProfileMsg_Count(profileMsg); ++k) {
-                        kPoint16s* data = GoProfileMsg_At(profileMsg, k);
-                        unsigned int validPointCount = 0;
-                        double XResolution = NM_TO_MM(GoProfileMsg_XResolution(profileMsg));
-                        double ZResolution = NM_TO_MM(GoProfileMsg_ZResolution(profileMsg));
-                        double XOffset = UM_TO_MM(GoProfileMsg_XOffset(profileMsg));
-                        double ZOffset = UM_TO_MM(GoProfileMsg_ZOffset(profileMsg));
-
-                        working_message.x_res = XResolution;
-                        working_message.z_res = ZResolution;
-                        working_message.x_offset = XOffset;
-                        working_message.z_offset = ZOffset;
-
-                        // translate 16-bit range data to engineering units and copy profiles to memory array
-                        for (arrayIndex = 0; arrayIndex < GoProfileMsg_Width(profileMsg); ++arrayIndex) {
-                            working_message.points[arrayIndex].x = data[arrayIndex].x;
-                            working_message.points[arrayIndex].z = data[arrayIndex].y;
-
-                            //                            if (data[arrayIndex].x != INVALID_RANGE_16BIT) {
-                            //                                profileBuffer[arrayIndex].x = XOffset + XResolution *
-                            //                                data[arrayIndex].x; profileBuffer[arrayIndex].z = ZOffset
-                            //                                + ZResolution * data[arrayIndex].y; validPointCount++;
-                            //                            } else {
-                            //                                profileBuffer[arrayIndex].x = INVALID_RANGE_DOUBLE;
-                            //                                profileBuffer[arrayIndex].z = INVALID_RANGE_DOUBLE;
-                            //                            }
-                        }
-                        //                        printf("  Profile Valid Point %d out of max %d\n", validPointCount,
-                        //                        profilePointCount);
-                    }
-                } break;
-                case GO_DATA_MESSAGE_TYPE_PROFILE_INTENSITY: {
-                    // kSize validPointCount = 0;
-                    GoProfileIntensityMsg intensityMsg = dataObj;
-                    printf("Intensity Message batch count: %u\n", (k32u)GoProfileIntensityMsg_Count(intensityMsg));
-
-                    // Reserve and create points
-                    size_t point_count = GoProfileIntensityMsg_Count(intensityMsg);
-
-                    if (working_message.points.size() < point_count) {
-                        working_message.points.reserve(point_count);
-                        for (size_t pc_ = 0; pc_ < point_count; ++pc_) {
-                            working_message.points.emplace_back();
-                        }
-                    }
-
-                    for (k = 0; k < GoProfileIntensityMsg_Count(intensityMsg); ++k) {
-                        unsigned char* data = GoProfileIntensityMsg_At(intensityMsg, k);
-                        for (arrayIndex = 0; arrayIndex < GoProfileIntensityMsg_Width(intensityMsg); ++arrayIndex) {
-                            working_message.points[arrayIndex].i = data[arrayIndex];
-                            //                            profileBuffer[arrayIndex].intensity = data[arrayIndex];
-                        }
-                    }
-                } break;
-            }
-        }
-        GoDestroy(dataset);
-    } else {
-        printf("Error: No data received during the waiting period\n");
-    }
-
-    for (const auto& m : messages) {
+    for (const auto& m : sensor.messages()) {
         printf("Timestamp  = %lu\n", m.timestamp);
         printf("Frame      = %lu\n", m.frame_index);
         printf("Encoder    = %lu\n", m.encoder);

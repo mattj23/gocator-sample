@@ -32,6 +32,11 @@ public:
     void start_sensor();
 
     bool receive(GoDataSet* data_set, uint64_t timeout);
+    bool receive_one(uint64_t timeout);
+
+    void reserve_message_size(size_t count);
+
+    const std::vector<Message>& messages() const;
 
 private:
     kAssembly api_{};
@@ -39,6 +44,10 @@ private:
     GoSensor sensor_{};
     GoSetup setup_{};
     size_t point_width_{};
+
+    std::vector<Message> messages_{};
+
+    void parse_message(GoDataMsg msg);
 };
 
 }  // namespace gocator
