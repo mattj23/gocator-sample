@@ -1,7 +1,9 @@
+#include <iostream>
 #include <GoSdk/GoSdk.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <memory.h>
+#include <vector>
+#include <raw_message.hpp>
 
 #define RECEIVE_TIMEOUT         (20000000)
 #define INVALID_RANGE_16BIT     ((signed short)0x8000)          // gocator transmits range data as 16-bit signed integers. 0x8000 signifies invalid range data.
@@ -33,6 +35,8 @@ int main(int argc, char **argv)
     kIpAddress ipAddress;
     GoSetup setup = kNULL;
     k32u profilePointCount;
+
+    std::vector<gocator::Message> messages;
 
     // construct Gocator API Library
     if ((status = GoSdk_Construct(&api)) != kOK)
@@ -108,6 +112,9 @@ int main(int argc, char **argv)
     {
         printf("Data message received:\n");
         printf("Dataset count: %u\n", (k32u)GoDataSet_Count(dataset));
+        messages.emplace_back();
+        auto &working_message = messages.back();
+
         // each result can have multiple data items
         // loop through all items in result message
         for (i = 0; i < GoDataSet_Count(dataset); ++i)
@@ -127,6 +134,10 @@ int main(int argc, char **argv)
                         printf("  Timestamp: %llu\n", stamp->timestamp);
                         printf("  Encoder: %lld\n", stamp->encoder);
                         printf("  Frame index: %llu\n", stamp->frameIndex);
+
+                        working_message.timestamp = stamp->timestamp;
+                        working_message.encoder = stamp->encoder;
+                        working_message.frame_index = stamp->frameIndex;
                     }
                 }
                     break;
@@ -170,6 +181,16 @@ int main(int argc, char **argv)
 
                     printf("Profile Message batch count: %u\n", (k32u)GoProfileMsg_Count(profileMsg));
 
+                    // Reserve and create points
+                    size_t point_count = GoProfileMsg_Width(profileMsg);
+
+                    if (working_message.points.size() < point_count) {
+                        working_message.points.reserve(point_count);
+                        for (size_t pc_ = 0; pc_ < point_count; ++pc_) {
+                            working_message.points.emplace_back();
+                        }
+                    }
+
                     for (k = 0; k < GoProfileMsg_Count(profileMsg); ++k)
                     {
                         kPoint16s* data = GoProfileMsg_At(profileMsg, k);
@@ -179,9 +200,17 @@ int main(int argc, char **argv)
                         double XOffset = UM_TO_MM(GoProfileMsg_XOffset(profileMsg));
                         double ZOffset = UM_TO_MM(GoProfileMsg_ZOffset(profileMsg));
 
+                        working_message.x_res = XResolution;
+                        working_message.z_res = ZResolution;
+                        working_message.x_offset = XOffset;
+                        working_message.z_offset = ZOffset;
+
                         //translate 16-bit range data to engineering units and copy profiles to memory array
                         for (arrayIndex = 0; arrayIndex < GoProfileMsg_Width(profileMsg); ++arrayIndex)
                         {
+                            working_message.points[arrayIndex].x = data[arrayIndex].x;
+                            working_message.points[arrayIndex].z = data[arrayIndex].y;
+
                             if (data[arrayIndex].x != INVALID_RANGE_16BIT)
                             {
                                 profileBuffer[arrayIndex].x = XOffset + XResolution * data[arrayIndex].x;
@@ -204,11 +233,22 @@ int main(int argc, char **argv)
                     GoProfileIntensityMsg intensityMsg = dataObj;
                     printf("Intensity Message batch count: %u\n", (k32u)GoProfileIntensityMsg_Count(intensityMsg));
 
+                    // Reserve and create points
+                    size_t point_count = GoProfileIntensityMsg_Count(intensityMsg);
+
+                    if (working_message.points.size() < point_count) {
+                        working_message.points.reserve(point_count);
+                        for (size_t pc_ = 0; pc_ < point_count; ++pc_) {
+                            working_message.points.emplace_back();
+                        }
+                    }
+
                     for (k = 0; k < GoProfileIntensityMsg_Count(intensityMsg); ++k)
                     {
                         unsigned char* data = GoProfileIntensityMsg_At(intensityMsg, k);
                         for (arrayIndex = 0; arrayIndex < GoProfileIntensityMsg_Width(intensityMsg); ++arrayIndex)
                         {
+                            working_message.points[arrayIndex].i = data[arrayIndex];
                             profileBuffer[arrayIndex].intensity = data[arrayIndex];
                         }
                     }
@@ -222,6 +262,24 @@ int main(int argc, char **argv)
     {
         printf ("Error: No data received during the waiting period\n");
     }
+
+    for (const auto& m : messages) {
+        printf("Timestamp  = %lu\n", m.timestamp);
+        printf("Frame      = %lu\n", m.frame_index);
+        printf("Encoder    = %lu\n", m.encoder);
+
+        printf("X Res      = %0.06f\n", m.x_res);
+        printf("Z Res      = %0.06f\n", m.z_res);
+        printf("X Offset   = %0.06f\n", m.x_offset);
+        printf("Z Offset   = %0.06f\n", m.z_offset);
+
+        for (const auto& p : m.points) {
+//            printf(" * %u %u %u\n", p.x, p.z, p.i);
+            if (p.x == INVALID_RANGE_16BIT) continue;
+            printf(" * %0.06f %0.06f %u\n", p.x * m.x_res + m.x_offset, p.z * m.z_res + m.z_offset, p.i);
+        }
+    }
+    std::cout << std::endl;
 
     // stop Gocator sensor
     if ((status = GoSystem_Stop(system)) != kOK)
