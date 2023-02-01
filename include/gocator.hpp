@@ -31,7 +31,6 @@ public:
     void stop_sensor();
     void start_sensor();
 
-    bool receive(GoDataSet* data_set, uint64_t timeout);
     bool receive_one(uint64_t timeout);
 
     void reserve_message_size(size_t count);
