@@ -71,10 +71,6 @@ void Gocator::start_sensor() {
     }
 }
 
-bool Gocator::receive(GoDataSet* data_set, uint64_t timeout) {
-    return GoSystem_ReceiveData(system_, data_set, timeout) == kOK;
-}
-
 bool Gocator::receive_one(uint64_t timeout) {
     GoDataSet dataset = nullptr;
     if (GoSystem_ReceiveData(system_, &dataset, timeout) == kOK) {
