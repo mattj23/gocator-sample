@@ -30,21 +30,29 @@ Message Message::from_stream(std::ifstream& file) {
 }
 
 void Message::to_stream(std::ofstream& file) const {
-    file.write(reinterpret_cast<const char*>(&timestamp), sizeof(timestamp));
-    file.write(reinterpret_cast<const char*>(&frame_index), sizeof(frame_index));
-    file.write(reinterpret_cast<const char*>(&encoder), sizeof(encoder));
+    file << "MESSAGE " << timestamp << " " << frame_index << " " << encoder << " " << x_res << " " << z_res;
+    file << " " << x_offset << " " << z_offset << "\n";
 
-    file.write(reinterpret_cast<const char*>(&x_res), sizeof(x_res));
-    file.write(reinterpret_cast<const char*>(&x_offset), sizeof(x_offset));
-    file.write(reinterpret_cast<const char*>(&z_res), sizeof(z_res));
-    file.write(reinterpret_cast<const char*>(&z_res), sizeof(z_res));
-
-    size_t count = points.size();
-    file.write(reinterpret_cast<const char*>(&count), sizeof(count));
-    for (const auto& p : points) {
-        file.write(reinterpret_cast<const char*>(&p.x), sizeof(p.x));
-        file.write(reinterpret_cast<const char*>(&p.z), sizeof(p.z));
-        file.write(reinterpret_cast<const char*>(&p.i), sizeof(p.i));
+    for (const auto &p : points) {
+        file << p.x << " " << p.z << " " << p.i << "\n";
     }
+
+
+//    file.write(reinterpret_cast<const char*>(&timestamp), sizeof(timestamp));
+//    file.write(reinterpret_cast<const char*>(&frame_index), sizeof(frame_index));
+//    file.write(reinterpret_cast<const char*>(&encoder), sizeof(encoder));
+//
+//    file.write(reinterpret_cast<const char*>(&x_res), sizeof(x_res));
+//    file.write(reinterpret_cast<const char*>(&x_offset), sizeof(x_offset));
+//    file.write(reinterpret_cast<const char*>(&z_res), sizeof(z_res));
+//    file.write(reinterpret_cast<const char*>(&z_res), sizeof(z_res));
+//
+//    size_t count = points.size();
+//    file.write(reinterpret_cast<const char*>(&count), sizeof(count));
+//    for (const auto& p : points) {
+//        file.write(reinterpret_cast<const char*>(&p.x), sizeof(p.x));
+//        file.write(reinterpret_cast<const char*>(&p.z), sizeof(p.z));
+//        file.write(reinterpret_cast<const char*>(&p.i), sizeof(p.i));
+//    }
 }
 }  // namespace gocator

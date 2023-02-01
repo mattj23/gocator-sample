@@ -4,6 +4,7 @@
 #include <memory>
 #include <raw_message.hpp>
 #include <vector>
+#include <cinttypes>
 
 #define RECEIVE_TIMEOUT (20000000)
 #define SENSOR_IP "192.168.1.10"
@@ -12,6 +13,11 @@
 #define UM_TO_MM(VALUE) (((k64f)(VALUE)) / 1000.0)
 
 using namespace std::chrono_literals;
+using namespace std::chrono;
+
+constexpr double kTotalDistance = 100;
+constexpr double kSpacing = 25.0 / 1940.0;
+constexpr size_t kTotalSamples = static_cast<size_t>(kTotalDistance / kSpacing);
 
 int main(int argc, char** argv) {
     kAssembly api = kNULL;
@@ -78,7 +84,7 @@ int main(int argc, char** argv) {
     printf("count: %i\n", count);
 
     // Reserve space
-    messages.reserve(3000);
+    messages.reserve(kTotalSamples);
 
     // start Gocator sensor
     if ((status = GoSystem_Start(system)) != kOK) {
@@ -158,57 +164,62 @@ int main(int argc, char** argv) {
             break;
         }
 
-        if (messages.size() >= 2000) {
-            auto elapsed = std::chrono::steady_clock::now() - start;
-            auto elapsed_ms =
-                static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-            printf("Rx %0.2f\n", static_cast<double>(messages.size()) / (elapsed_ms / 1000.0));
+        if (messages.size() >= kTotalSamples) {
+            break;
+//            auto elapsed = std::chrono::steady_clock::now() - start;
+//            auto elapsed_ms =
+//                static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+//            printf("Rx %0.2f\n", static_cast<double>(messages.size()) / (elapsed_ms / 1000.0));
 
-            std::ofstream out("test.data", std::ios::binary | std::ios::out);
-            for (const auto& m : messages) {
-                m.to_stream(out);
-            }
-            out.close();
 
             // Check
-            std::ifstream in_file("test.data", std::ios::binary | std::ios::in);
-            std::vector<gocator::Message> recorded;
-            while (!in_file.eof()) {
-                recorded.push_back(gocator::Message::from_stream(in_file));
-            }
-
-            for (int l = 0; l < messages.size(); ++l) {
-                if (recorded[l].timestamp != messages[l].timestamp) printf("mis-match\n");
-                if (recorded[l].frame_index != messages[l].frame_index) printf("mis-match\n");
-                if (recorded[l].encoder != messages[l].encoder) printf("mis-match\n");
-                if (recorded[l].x_res != messages[l].x_res) printf("mis-match\n");
-                if (recorded[l].z_res != messages[l].z_res) printf("mis-match\n");
-                if (recorded[l].x_offset != messages[l].x_offset) printf("mis-match\n");
-                if (recorded[l].z_offset != messages[l].z_offset) printf("mis-match\n");
-
-                for (int m = 0; m < messages[l].points.size(); ++m) {
-                    if (recorded[l].points[m].x != messages[l].points[m].x) printf("mis-match\n");
-                    if (recorded[l].points[m].z != messages[l].points[m].z) printf("mis-match\n");
-                    if (recorded[l].points[m].i != messages[l].points[m].i) printf("mis-match\n");
-                }
-            }
-
-            messages.clear();
-            start = std::chrono::steady_clock::now();
+//            std::ifstream in_file("test.data", std::ios::binary | std::ios::in);
+//            std::vector<gocator::Message> recorded;
+//            while (!in_file.eof()) {
+//                recorded.push_back(gocator::Message::from_stream(in_file));
+//            }
+//
+//            for (int l = 0; l < messages.size(); ++l) {
+//                if (recorded[l].timestamp != messages[l].timestamp) printf("mis-match\n");
+//                if (recorded[l].frame_index != messages[l].frame_index) printf("mis-match\n");
+//                if (recorded[l].encoder != messages[l].encoder) printf("mis-match\n");
+//                if (recorded[l].x_res != messages[l].x_res) printf("mis-match\n");
+//                if (recorded[l].z_res != messages[l].z_res) printf("mis-match\n");
+//                if (recorded[l].x_offset != messages[l].x_offset) printf("mis-match\n");
+//                if (recorded[l].z_offset != messages[l].z_offset) printf("mis-match\n");
+//
+//                for (int m = 0; m < messages[l].points.size(); ++m) {
+//                    if (recorded[l].points[m].x != messages[l].points[m].x) printf("mis-match\n");
+//                    if (recorded[l].points[m].z != messages[l].points[m].z) printf("mis-match\n");
+//                    if (recorded[l].points[m].i != messages[l].points[m].i) printf("mis-match\n");
+//                }
+//            }
+//
+//            messages.clear();
+//            start = std::chrono::steady_clock::now();
         }
     }
 
-    // stop Gocator sensor
-    if ((status = GoSystem_Stop(system)) != kOK) {
-        printf("Error: GoSensor_Stop:%d\n", status);
-        return 0;
+    uint64_t time_stamp = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+    std::string file_name = std::to_string(time_stamp) + ".data";
+//    std::ofstream out(file_name, std::ios::binary | std::ios::out);
+    std::ofstream out(file_name, std::ios::out);
+    for (const auto& m : messages) {
+        m.to_stream(out);
     }
+    out.close();
+
+    // stop Gocator sensor
+//    if ((status = GoSystem_Stop(system)) != kOK) {
+//        printf("Error: GoSensor_Stop:%d\n", status);
+//        return 0;
+//    }
 
     // destroy handles
     GoDestroy(system);
     GoDestroy(api);
 
-    printf("Press any key to continue...\n");
-    getchar();
+//    printf("Press any key to continue...\n");
+//    getchar();
     return 0;
 }
