@@ -3,10 +3,13 @@ project(gocator_record)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(include)
 
 find_library(GOCATOR NAMES GoSdk REQUIRED)
 find_library(KAPI NAMES kApi REQUIRED)
+find_package(Open3D REQUIRED)
+
+include_directories(include ${Open3D_INCLUDE_DIRS})
+message(STATUS "Open3D Include: ${Open3D_INCLUDE_DIRS}")
 
 set(SOURCE_FILES
         src/main.cpp
@@ -15,4 +18,4 @@ set(SOURCE_FILES
         )
 
 add_executable(gocator_record ${SOURCE_FILES})
-target_link_libraries(gocator_record PUBLIC ${GOCATOR} ${KAPI})
+target_link_libraries(gocator_record PUBLIC ${GOCATOR} ${KAPI} Open3D::Open3D)
