@@ -47,4 +47,9 @@ void Message::to_stream(std::ofstream& file) const {
         file.write(reinterpret_cast<const char*>(&p.i), sizeof(p.i));
     }
 }
+
+void Correspondence::to_stream(std::ofstream& file) const {
+    uint8_t data[] = {static_cast<uint8_t>(row >> 8), static_cast<uint8_t>(row & 0xFF), i};
+    file.write(reinterpret_cast<const char*>(data), 3);
+}
 }  // namespace gocator

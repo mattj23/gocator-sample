@@ -28,4 +28,12 @@ struct Message {
     void to_stream(std::ofstream& file) const;
     static Message from_stream(std::ifstream& file);
 };
+
+struct Correspondence {
+    uint16_t row;
+    uint16_t col;
+    uint8_t i;
+
+    void to_stream(std::ofstream& file) const;
+};
 }  // namespace gocator

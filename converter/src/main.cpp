@@ -42,7 +42,7 @@ void convert(const char* file_name) {
     geometry::PointCloud cloud;
 
     // Mapping between indices and intensities
-    std::vector<Correspondence> correspondences;
+    std::vector<gocator::Correspondence> correspondences;
     Reduced reduced;
 
     if (recorded.size() > kMax16Bit) {
@@ -75,11 +75,18 @@ void convert(const char* file_name) {
         }
     }
 
-    // Full point cloud
+    // Write correspondences
+    std::ofstream cor_file(base_path + ".corr", std::ios::binary | std::ios::out);
+    for (const auto& c : correspondences) {
+        c.to_stream(cor_file);
+    }
+    cor_file.close();
+
+    // Write full point cloud
     open3d::io::WritePointCloudOption option(false, true);
     open3d::io::WritePointCloudToPCD(base_path + ".full.pcd", cloud, option);
 
-    // Partial point cloud
+    // Reduced triangle mesh
     geometry::TriangleMesh thinned;
     for (size_t i = 0; i < reduced.max_row() - 1; ++i) {
         for (size_t k = 0; k < reduced.max_col() - 1; ++k) {
@@ -106,6 +113,7 @@ void convert(const char* file_name) {
         }
     }
 
+    // Write triangle mesh
     thinned.ComputeVertexNormals();
     open3d::io::WriteTriangleMeshToSTL(base_path + ".thinned.stl", thinned, false, false, true, false, false, false);
 }
