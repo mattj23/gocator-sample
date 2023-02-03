@@ -7,6 +7,7 @@ find_package(Open3D REQUIRED)
 include_directories(include)
 
 set(SOURCE_INCLUDES
+        src/reduced.cpp
         src/main.cpp
         src/raw_message.cpp)
 
