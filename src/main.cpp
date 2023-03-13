@@ -46,18 +46,6 @@ int main(int argc, char** argv) {
     for (size_t i = 0; i < sensor.messages().size(); ++i) {
         const auto& m = sensor.messages()[i];
         m.to_stream(out_file);
-
-        for (size_t j = 0; j < m.points.size(); ++j) {
-            const auto& p = m.points[j];
-
-            if (p.x == INVALID_RANGE_16BIT) continue;
-            double color = p.i / 256.0;
-
-            // For reference, this is how you would fill the points in an Open3D point cloud from a vector of Message
-            // objects.
-            // point_cloud.points_.emplace_back(p.x * m.x_res + m.x_offset, i * kMmPerPoint, p.z * m.z_res + m.z_offset);
-            // point_cloud.colors_.emplace_back(color, color, color);
-        }
     }
     out_file.close();
 
