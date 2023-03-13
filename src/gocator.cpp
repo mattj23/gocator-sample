@@ -1,9 +1,12 @@
+#include <algorithm>
 #include <gocator.hpp>
 
 #define NM_TO_MM(VALUE) (((k64f)(VALUE)) / 1000000.0)
 #define UM_TO_MM(VALUE) (((k64f)(VALUE)) / 1000.0)
 
 namespace gocator {
+
+bool compare_msg(const Message& a, const Message& b) { return (a.timestamp < b.timestamp); }
 
 Gocator::Gocator(const std::string& ip_addr) {
     kStatus status;
@@ -160,5 +163,7 @@ void Gocator::parse_message(GoDataMsg msg) {
 }
 
 const std::vector<Message>& Gocator::messages() const { return messages_; }
+
+void Gocator::sort_messages() { std::sort(messages_.begin(), messages_.end(), compare_msg); }
 
 }  // namespace gocator

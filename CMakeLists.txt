@@ -3,10 +3,9 @@ project(gocator_record)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(include)
-
 find_library(GOCATOR NAMES GoSdk REQUIRED)
 find_library(KAPI NAMES kApi REQUIRED)
+include_directories(include)
 
 set(SOURCE_FILES
         src/main.cpp

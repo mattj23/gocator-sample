@@ -30,13 +30,6 @@ Message Message::from_stream(std::ifstream& file) {
 }
 
 void Message::to_stream(std::ofstream& file) const {
-    //    file << "MESSAGE " << timestamp << " " << frame_index << " " << encoder << " " << x_res << " " << z_res;
-    //    file << " " << x_offset << " " << z_offset << "\n";
-    //
-    //    for (const auto& p : points) {
-    //        file << p.x << " " << p.z << " " << p.i << "\n";
-    //    }
-
     file.write(reinterpret_cast<const char*>(&timestamp), sizeof(timestamp));
     file.write(reinterpret_cast<const char*>(&frame_index), sizeof(frame_index));
     file.write(reinterpret_cast<const char*>(&encoder), sizeof(encoder));

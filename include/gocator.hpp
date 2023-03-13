@@ -34,6 +34,7 @@ public:
     bool receive_one(uint64_t timeout);
 
     void reserve_message_size(size_t count);
+    void sort_messages();
 
     const std::vector<Message>& messages() const;
 
